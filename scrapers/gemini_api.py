@@ -22,7 +22,7 @@ class GeminiScraper(BaseScraper):
     
     def search(self, book_title):
         """Search for book information using Gemini API"""
-        if not self.api_key or self.api_key == "your_gemini_api_key_here":
+        if not self.api_key or self.api_key == "AIzaSyDFdkB-IraeB2amnYBrm988HQUKPcxfzbc":
             self.logger.error("Cannot search without valid Gemini API key")
             return []
         
