@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookPriceHub - Book Price Comparison Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-book-open"></i>
+                <h1>BookPriceHub</h1>
+            </div>
+            <p class="tagline">Find the best deals on books across multiple retailers</p>
+        </header>
+
+        <main>
+            <section class="search-section">
+                <form id="search-form">
+                    <div class="search-container">
+                        <input type="text" id="book-title" placeholder="Enter book title..." required>
+                        <button type="submit" id="search-button">
+                            <i class="fas fa-search"></i>
+                            <span>Search</span>
+                        </button>
+                    </div>
+                    <div class="format-filter">
+                        <span>Filter by format:</span>
+                        <div class="format-options">
+                            <label>
+                                <input type="radio" name="format" value="all" checked>
+                                <span>All</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="format" value="hardcover">
+                                <span>Hardcover</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="format" value="paperback">
+                                <span>Paperback</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="format" value="ebook">
+                                <span>Ebook</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="format" value="audiobook">
+                                <span>Audiobook</span>
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="loading-section" id="loading-section">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <p>Searching across multiple retailers...</p>
+            </section>
+
+            <section class="results-section" id="results-section">
+                <div class="results-header">
+                    <h2>Search Results</h2>
+                    <div class="sort-options">
+                        <label for="sort-by">Sort by:</label>
+                        <select id="sort-by">
+                            <option value="price-asc">Price: Low to High</option>
+                            <option value="price-desc">Price: High to Low</option>
+                            <option value="title-asc">Title: A to Z</option>
+                            <option value="title-desc">Title: Z to A</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="results-container" id="results-container">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <section class="no-results-section" id="no-results-section">
+                <div class="no-results-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h2>No results found</h2>
+                <p>We couldn't find any books matching your search. Please try a different title.</p>
+            </section>
+
+            <section class="error-section" id="error-section">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2>Oops! Something went wrong</h2>
+                <p id="error-message">There was an error processing your request. Please try again later.</p>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <p>&copy; 2025 BookPriceHub | A book price comparison tool</p>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                    <a href="#" class="footer-link">About</a>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Book Details Modal -->
+        <div class="modal" id="book-details-modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div class="modal-body" id="modal-body">
+                    <!-- Modal content will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="book-card-template">
+        <div class="book-card">
+            <div class="book-image">
+                <img src="" alt="Book cover">
+            </div>
+            <div class="book-info">
+                <h3 class="book-title"></h3>
+                <p class="book-author"></p>
+                <div class="price-comparison">
+                    <div class="best-price">
+                        <span class="best-price-label">Best Price</span>
+                        <span class="best-price-value"></span>
+                    </div>
+                    <button class="compare-button">Compare All Prices</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="book-details-template">
+        <div class="book-details">
+            <div class="book-details-header">
+                <div class="book-details-image">
+                    <img src="" alt="Book cover">
+                </div>
+                <div class="book-details-info">
+                    <h2 class="book-details-title"></h2>
+                    <p class="book-details-author"></p>
+                </div>
+            </div>
+            <div class="book-details-prices">
+                <h3>Price Comparison</h3>
+                <div class="price-table-container">
+                    <table class="price-table">
+                        <thead>
+                            <tr>
+                                <th>Retailer</th>
+                                <th>Format</th>
+                                <th>Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="price-table-body">
+                            <!-- Price rows will be dynamically inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="ebook-availability">
+                <h3>Ebook Availability</h3>
+                <div class="ebook-sources">
+                    <!-- Ebook sources will be dynamically inserted here -->
+                </div>
+            </div>
+            <div class="free-ebooks">
+                <h3>Free Ebook Sources</h3>
+                <div class="free-ebook-sources">
+                    <!-- Free ebook sources will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
