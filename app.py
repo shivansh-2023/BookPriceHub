@@ -5,11 +5,7 @@ import concurrent.futures
 from flask_cors import CORS
 from scrapers.amazon import AmazonScraper
 from scrapers.barnes_noble import BarnesNobleScraper
-from scrapers.book_depository import BookDepositoryScraper
-from scrapers.books_a_million import BooksAMillionScraper
 from scrapers.ebook_sources import EbookSourcesScraper
-from scrapers.gemini_api import GeminiScraper
-from scrapers.isbndb import IsbnDBScraper
 from utils.cache_manager import CacheManager
 from utils.result_processor import process_results
 
@@ -22,15 +18,11 @@ CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type", "
 cache_manager = CacheManager()
 
 def create_scrapers():
-    """Initialize all scrapers"""
+    """Initialize reliable scrapers"""
     scrapers = {
         'amazon': AmazonScraper(),
         'barnes_noble': BarnesNobleScraper(),
-        'book_depository': BookDepositoryScraper(),
-        'books_a_million': BooksAMillionScraper(),
-        'ebook_sources': EbookSourcesScraper(),
-        'gemini': GeminiScraper(),
-        'isbndb': IsbnDBScraper()
+        'ebook_sources': EbookSourcesScraper()
     }
     return scrapers
 
@@ -83,34 +75,11 @@ def search():
             print("Returning cached results")
             return jsonify(cached_results)
         
-        # First try with Gemini for most reliable results
-        try:
-            print(f"Attempting to use Gemini API for '{book_title}'")
-            gemini_results = scrapers['gemini'].search(book_title)
-            print(f"Gemini API returned {len(gemini_results) if gemini_results else 0} results")
-            if gemini_results and len(gemini_results) >= 3:
-                # If we get good results from Gemini, use those
-                print(f"Using Gemini results: {len(gemini_results)} items found")
-                results = {'Gemini Books': gemini_results}
-                processed_results = process_results(results, format_filter)
-                cache_manager.cache_results(book_title, format_filter, processed_results)
-                return jsonify(processed_results)
-            else:
-                print(f"Gemini results insufficient, falling back to web scrapers")
-        except Exception as e:
-            print(f"Error with Gemini search: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            # Continue with other scrapers if Gemini fails
-            
-        # Define search tasks
+        # Define search tasks with reliable scrapers
         search_tasks = {
             'amazon': (execute_search, scrapers['amazon'], book_title),
             'barnes_noble': (execute_search, scrapers['barnes_noble'], book_title),
-            'book_depository': (execute_search, scrapers['book_depository'], book_title),
-            'books_a_million': (execute_search, scrapers['books_a_million'], book_title),
-            'ebook_sources': (execute_search, scrapers['ebook_sources'], book_title),
-            'isbndb': (execute_search, scrapers['isbndb'], book_title)
+            'ebook_sources': (execute_search, scrapers['ebook_sources'], book_title)
         }
         
         # Execute searches in parallel

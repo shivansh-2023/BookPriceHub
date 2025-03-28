@@ -28,6 +28,12 @@ class BaseScraper(ABC):
             
         self.session = requests.Session()
         self.rate_limit_delay = (1, 3)  # Random delay between 1-3 seconds
+        
+        # Initialize proxy list and index
+        self.proxy_list = []
+        self.current_proxy_index = 0
+        self.max_retries = 3  # Default max retries
+        self.retry_status_codes = {403, 429, 500, 502, 503, 504}  # Default status codes for retry
     
     def _get_headers(self):
         """Generate random user agent headers to avoid detection"""
@@ -70,53 +76,68 @@ class BaseScraper(ABC):
             print(f"Error normalizing URL '{url}': {str(e)}")
             return url
     
-    def _make_request(self, url, method='get', params=None, data=None, retries=3):
-        """Make HTTP request with retry logic and rate limiting"""
+    def _get_next_proxy(self):
+        """Get the next proxy from the rotation list"""
+        if not self.proxy_list:
+            return None
+        proxy = self.proxy_list[self.current_proxy_index]
+        self.current_proxy_index = (self.current_proxy_index + 1) % len(self.proxy_list)
+        return proxy
+
+    def _make_request(self, url, method='get', params=None, data=None, retries=None):
+        """Make HTTP request with enhanced retry logic and rate limiting"""
         url = self._normalize_url(url)
+        retries = retries or self.max_retries
         print(f"Making {method.upper()} request to: {url}")
         
         for attempt in range(retries):
             try:
-                # Add random delay for rate limiting
+                # Add random delay with increased range for rate limiting
                 time.sleep(random.uniform(*self.rate_limit_delay))
                 
-                # Make the request
-                if method.lower() == 'get':
-                    response = self.session.get(
-                        url, 
-                        headers=self._get_headers(), 
-                        params=params,
-                        timeout=10,  # Reduced timeout for faster failure
-                        allow_redirects=True
-                    )
-                else:
-                    response = self.session.post(
-                        url, 
-                        headers=self._get_headers(), 
-                        data=data,
-                        timeout=10,  # Reduced timeout for faster failure
-                        allow_redirects=True
-                    )
+                # Get proxy for this attempt
+                proxy = self._get_next_proxy()
+                proxies = {"http": proxy, "https": proxy} if proxy else None
                 
-                # Check if response is valid
+                # Prepare request kwargs
+                request_kwargs = {
+                    "headers": self._get_headers(),
+                    "timeout": 15,  # Increased timeout
+                    "allow_redirects": True,
+                    "proxies": proxies
+                }
+                
+                # Add method-specific parameters
+                if method.lower() == 'get' and params:
+                    request_kwargs["params"] = params
+                elif method.lower() == 'post' and data:
+                    request_kwargs["data"] = data
+                
+                # Make the request
+                response = getattr(self.session, method.lower())(url, **request_kwargs)
+                
+                # Handle response
                 if response.status_code == 200:
                     print(f"Successful request to {url}")
                     return response
-                # Don't immediately fail on 403 - try a different user agent
-                elif response.status_code == 403 and attempt < retries - 1:
-                    print(f"Request to {url} was blocked (403 Forbidden). Trying with different user agent.")
-                    # Reset session to get a new user agent
-                    self.session = requests.Session()
+                elif response.status_code in self.retry_status_codes and attempt < retries - 1:
+                    print(f"Request to {url} failed with status {response.status_code}. Rotating proxy and retrying.")
+                    self.session = requests.Session()  # Reset session
+                    # Exponential backoff with jitter
+                    backoff_time = min(30, (2 ** attempt) + random.uniform(0, 1))  # Cap at 30 seconds
+                    print(f"Retrying in {backoff_time:.2f} seconds...")
+                    time.sleep(backoff_time)
+                    continue
                 else:
                     print(f"Request to {url} failed with status code {response.status_code}")
                     response.raise_for_status()
             
-            except requests.exceptions.RequestException as e:
+            except (requests.exceptions.RequestException, Exception) as e:
                 print(f"Error on attempt {attempt+1} fetching {url}: {str(e)}")
                 if attempt == retries - 1:
                     return None
-                # Exponential backoff with jitter
-                backoff_time = (2 ** attempt) + random.uniform(0, 1)
+                # Exponential backoff with jitter and increased max delay
+                backoff_time = min(30, (2 ** attempt) + random.uniform(0, 2))
                 print(f"Retrying in {backoff_time:.2f} seconds...")
                 time.sleep(backoff_time)
         

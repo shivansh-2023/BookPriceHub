@@ -164,11 +164,16 @@ class EbookSourcesScraper(BaseScraper):
             'q': book_title,
             'maxResults': 15,
             'printType': 'books',
-            'orderBy': 'relevance'
+            'orderBy': 'relevance',
+            'subject': 'computers',  # Filter for computer and technology books
+            'filter': 'paid-ebooks',  # Focus on available ebooks
+            'langRestrict': 'en'  # English language books
         }
         
+        print(f"Searching Google Books for: {book_title}")
         response = self._make_request(base_url, params=params)
         if not response:
+            print("No response from Google Books API")
             return []
         
         try:
@@ -176,6 +181,7 @@ class EbookSourcesScraper(BaseScraper):
             results = []
             
             if 'items' not in data:
+                print("No items found in Google Books API response")
                 return []
                 
             for item in data['items']:
